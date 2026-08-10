@@ -37,7 +37,10 @@ Everything runs locally on your machine. Recordings stay in your folders until y
 
 **Planned next:**
 - Recording with system audio (WASAPI loopback), microphone, or both, with A/V sync.
-- Annotation, clipboard copy, local history, and explicit errors for protected content, missing devices, and permission failures.
+- Annotation and local history.
+- Explicit errors for protected content, missing devices, and permission failures.
+
+After any native capture, SnipRecord displays the actual local PNG in the preview and can copy it to the Windows clipboard. The saved PNG stays under `Pictures\SnipRecord\captures`.
 
 ## Roadmap
 

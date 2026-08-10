@@ -181,6 +181,19 @@ fn capture_region(app: AppHandle, x: i32, y: i32, width: i32, height: i32) -> Re
 }
 
 #[tauri::command]
+fn copy_capture_to_clipboard(path: String) -> Result<(), String> {
+    let decoded = image::open(&path).map_err(|error| error.to_string())?.to_rgba8();
+    let (width, height) = decoded.dimensions();
+    let image_data = arboard::ImageData {
+        width: width as usize,
+        height: height as usize,
+        bytes: std::borrow::Cow::Owned(decoded.into_raw()),
+    };
+    let mut clipboard = arboard::Clipboard::new().map_err(|error| error.to_string())?;
+    clipboard.set_image(image_data).map_err(|error| error.to_string())
+}
+
+#[tauri::command]
 fn list_capture_windows() -> Result<Vec<CaptureWindow>, String> {
     list_windows()
 }
@@ -213,6 +226,7 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             capture_screen,
             capture_region,
+            copy_capture_to_clipboard,
             list_capture_windows,
             capture_window,
             recording_capability

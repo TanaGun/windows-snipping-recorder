@@ -20,6 +20,7 @@ tauri-build = { version = "2.5", features = [] }
 tauri = { version = "2.11", features = [] }
 serde = { version = "1", features = ["derive"] }
 image = { version = "0.25", default-features = false, features = ["png"] }
+arboard = { version = "3.6", default-features = false, features = ["image-data"] }
 windows = { version = "0.62", features = [
   "Win32_Foundation",
   "Win32_Graphics_Gdi",
