@@ -12,6 +12,7 @@ import './styles/app.css'
 type CaptureSource = 'Region' | 'Window' | 'Full screen'
 type Tool = 'Select' | 'Pen' | 'Arrow' | 'Rectangle' | 'Text' | 'Blur' | 'Crop'
 type NativeCapture = { path: string; width: number; height: number }
+type CaptureWindow = { handle: number; title: string; x: number; y: number; width: number; height: number }
 
 const isTauri = () => '__TAURI_INTERNALS__' in window
 
@@ -42,6 +43,8 @@ function App() {
   const [selectingRegion, setSelectingRegion] = useState(false)
   const [regionStart, setRegionStart] = useState<{ x: number; y: number } | null>(null)
   const [regionCurrent, setRegionCurrent] = useState<{ x: number; y: number } | null>(null)
+  const [windows, setWindows] = useState<CaptureWindow[]>([])
+  const [showWindowPicker, setShowWindowPicker] = useState(false)
 
   useEffect(() => {
     if (!recording) return
@@ -72,7 +75,20 @@ function App() {
       notify('Drag over the area to capture. Press Esc to cancel.')
       return
     }
-    if (source === 'Window') { notify('Window capture is the next native milestone.'); return }
+    if (source === 'Window') {
+      setCapturing(true)
+      try {
+        const available = await invoke<CaptureWindow[]>('list_capture_windows')
+        setWindows(available)
+        setShowWindowPicker(true)
+        if (!available.length) notify('No capturable windows are available.')
+      } catch (error) {
+        notify(`Could not list windows: ${String(error)}`)
+      } finally {
+        setCapturing(false)
+      }
+      return
+    }
     setCapturing(true)
     try {
       saveNativeResult(await invoke<NativeCapture>('capture_screen'))
@@ -101,6 +117,17 @@ function App() {
       }))
     } catch (error) {
       notify(`Capture failed: ${String(error)}`)
+    } finally {
+      setCapturing(false)
+    }
+  }
+  const captureSelectedWindow = async (window: CaptureWindow) => {
+    setShowWindowPicker(false)
+    setCapturing(true)
+    try {
+      saveNativeResult(await invoke<NativeCapture>('capture_window', { window }))
+    } catch (error) {
+      notify(`Window capture failed: ${String(error)}`)
     } finally {
       setCapturing(false)
     }
@@ -150,6 +177,13 @@ function App() {
       </> : <section className="empty-view"><Scissors size={32}/><h2>{page} is local to this PC</h2><p>This prototype focuses on the Capture workflow. Select Capture to create a new snip.</p><button onClick={() => setPage('Capture')}>Go to Capture</button></section>}
     </section>
     {toast && <div className="toast"><Check size={17}/>{toast}</div>}
+    {showWindowPicker && <div className="window-picker-overlay" role="dialog" aria-modal="true" aria-label="Choose a window to capture">
+      <section className="window-picker">
+        <div className="window-picker-head"><div><p className="eyebrow">WINDOW CAPTURE</p><h2>Choose a window</h2><p>Only visible, non-minimized windows are listed.</p></div><button onClick={() => setShowWindowPicker(false)}>×</button></div>
+        <div className="window-list">{windows.map((window) => <button key={window.handle} onClick={() => captureSelectedWindow(window)}><AppWindow size={18}/><span><b>{window.title}</b><small>{window.width} × {window.height}</small></span></button>)}</div>
+        <button className="window-picker-cancel" onClick={() => setShowWindowPicker(false)}>Cancel</button>
+      </section>
+    </div>}
     {selectingRegion && <div
       className="region-overlay"
       onMouseDown={(event) => { setRegionStart({ x: event.clientX, y: event.clientY }); setRegionCurrent({ x: event.clientX, y: event.clientY }) }}

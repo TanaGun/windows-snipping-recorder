@@ -1,17 +1,21 @@
 use std::path::PathBuf;
 
 use image::{ImageBuffer, Rgba};
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use tauri::{AppHandle, Manager};
 use windows::{
-    core::Result as WinResult,
+    core::{BOOL, Result as WinResult},
     Win32::{
+        Foundation::{HWND, LPARAM, RECT},
         Graphics::Gdi::{
             BitBlt, CreateCompatibleBitmap, CreateCompatibleDC, DeleteDC, DeleteObject, GetDC,
             GetDIBits, ReleaseDC, SelectObject, BITMAPINFO, BITMAPINFOHEADER, BI_RGB,
             CAPTUREBLT, DIB_RGB_COLORS, HBITMAP, SRCCOPY,
         },
-        UI::WindowsAndMessaging::{GetSystemMetrics, SM_CXSCREEN, SM_CYSCREEN},
+        UI::WindowsAndMessaging::{
+            EnumWindows, GetShellWindow, GetSystemMetrics, GetWindowRect, GetWindowTextLengthW,
+            GetWindowTextW, IsIconic, IsWindowVisible, SM_CXSCREEN, SM_CYSCREEN,
+        },
     },
 };
 
@@ -19,6 +23,17 @@ use windows::{
 #[serde(rename_all = "camelCase")]
 pub struct CaptureResult {
     pub path: String,
+    pub width: i32,
+    pub height: i32,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CaptureWindow {
+    pub handle: isize,
+    pub title: String,
+    pub x: i32,
+    pub y: i32,
     pub width: i32,
     pub height: i32,
 }
@@ -91,6 +106,44 @@ fn capture_primary_display() -> WinResult<(Vec<u8>, i32, i32)> {
     capture_pixels(0, 0, width, height)
 }
 
+unsafe extern "system" fn collect_window(hwnd: HWND, lparam: LPARAM) -> BOOL {
+    if !IsWindowVisible(hwnd).as_bool() || IsIconic(hwnd).as_bool() || hwnd == GetShellWindow() {
+        return BOOL(1);
+    }
+    let title_length = GetWindowTextLengthW(hwnd);
+    if title_length <= 0 {
+        return BOOL(1);
+    }
+    let mut rect = RECT::default();
+    if GetWindowRect(hwnd, &mut rect).is_err() {
+        return BOOL(1);
+    }
+    let width = rect.right - rect.left;
+    let height = rect.bottom - rect.top;
+    if width < 80 || height < 60 {
+        return BOOL(1);
+    }
+    let mut buffer = vec![0u16; title_length as usize + 1];
+    let copied = GetWindowTextW(hwnd, &mut buffer);
+    if copied <= 0 {
+        return BOOL(1);
+    }
+    let title = String::from_utf16_lossy(&buffer[..copied as usize]);
+    let windows = &mut *(lparam.0 as *mut Vec<CaptureWindow>);
+    windows.push(CaptureWindow { handle: hwnd.0 as isize, title, x: rect.left, y: rect.top, width, height });
+    BOOL(1)
+}
+
+fn list_windows() -> Result<Vec<CaptureWindow>, String> {
+    let mut windows: Vec<CaptureWindow> = Vec::new();
+    unsafe {
+        EnumWindows(Some(collect_window), LPARAM((&mut windows as *mut Vec<CaptureWindow>) as isize))
+            .map_err(|error| error.to_string())?;
+    }
+    windows.sort_by(|left, right| left.title.to_lowercase().cmp(&right.title.to_lowercase()));
+    Ok(windows)
+}
+
 fn captures_dir(app: &AppHandle) -> Result<PathBuf, String> {
     let base = app.path().picture_dir().map_err(|error| error.to_string())
         .or_else(|_| app.path().app_data_dir().map_err(|error| error.to_string()))?;
@@ -128,6 +181,21 @@ fn capture_region(app: AppHandle, x: i32, y: i32, width: i32, height: i32) -> Re
 }
 
 #[tauri::command]
+fn list_capture_windows() -> Result<Vec<CaptureWindow>, String> {
+    list_windows()
+}
+
+#[tauri::command]
+fn capture_window(app: AppHandle, window: CaptureWindow) -> Result<CaptureResult, String> {
+    if window.width < 2 || window.height < 2 {
+        return Err("The selected window has an invalid size.".into());
+    }
+    let (bgra, width, height) = capture_pixels(window.x, window.y, window.width, window.height)
+        .map_err(|error| error.to_string())?;
+    save_capture(&app, bgra, width, height)
+}
+
+#[tauri::command]
 fn recording_capability() -> RecordingCapability {
     RecordingCapability {
         available: false,
@@ -142,7 +210,13 @@ fn chrono_like_timestamp() -> String {
 
 pub fn run() {
     tauri::Builder::default()
-        .invoke_handler(tauri::generate_handler![capture_screen, capture_region, recording_capability])
+        .invoke_handler(tauri::generate_handler![
+            capture_screen,
+            capture_region,
+            list_capture_windows,
+            capture_window,
+            recording_capability
+        ])
         .run(tauri::generate_context!())
         .expect("error while running SnipRecord");
 }
