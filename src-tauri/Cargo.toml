@@ -1,0 +1,20 @@
+[package]
+name = "windows-snipping-recorder"
+version = "0.1.0"
+description = "Windows-local screen capture and recording utility"
+authors = ["Tanakom Phuvoraprasert"]
+edition = "2021"
+
+[lib]
+name = "windows_snipping_recorder"
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+# Add tauri, windows, and capture/audio crates when Rust + Tauri prerequisites are installed.
+
+[features]
+default = []
+custom-protocol = []
+
+# This is a native integration contract only. It intentionally does not compile
+# until the Tauri dependency set is installed on the Windows build host.

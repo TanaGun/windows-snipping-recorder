@@ -1,0 +1,77 @@
+# ------------------------------------------------------------------
+# Windows Snipping Recorder — .gitignore
+# This is a LOCAL-ONLY recording app: user recordings, logs, and app
+# data must never be committed. Project documentation (README, docs/,
+# CONTRIBUTING, SECURITY, LICENSE) is deliberately NOT ignored.
+# ------------------------------------------------------------------
+
+# --- Dependencies -------------------------------------------------
+node_modules/
+.pnp
+.pnp.js
+
+# --- Build output -------------------------------------------------
+dist/
+dist-ssr/
+build/
+coverage/
+*.tsbuildinfo
+.vite/
+src-tauri/target/
+target/
+
+# --- User recordings & app data (local-only: never push captures) --
+captures/
+recordings/
+output/
+data/raw/
+data/processed/
+reports/
+
+# --- Logs ---------------------------------------------------------
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# --- Databases ----------------------------------------------------
+*.sqlite
+*.sqlite3
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+
+# --- Environment & secrets ----------------------------------------
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+
+# --- OS junk ------------------------------------------------------
+Thumbs.db
+Desktop.ini
+.DS_Store
+
+# --- IDEs / editors / OS tooling ----------------------------------
+.vs/
+.vscode/
+.idea/
+*.suo
+*.user
+*.userosscache
+*.userprefs
+*.sln.docstates
+*.swp
+*.swo
+*~
+.nyc_output/
+
+# --- Tauri / Rust generated (kept local) --------------------------
+src-tauri/gen/schemas/
+src-tauri/.tauri/

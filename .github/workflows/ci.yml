@@ -1,0 +1,40 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build (windows-latest)
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      # Lint runs ONLY when a "lint" script exists in package.json.
+      # The scaffold has no lint script yet, so this step skips
+      # gracefully instead of failing CI.
+      - name: Lint (if a lint script is defined)
+        shell: bash
+        run: |
+          if node -e "const s = require('./package.json').scripts || {}; process.exit(s.lint ? 0 : 1)"; then
+            npm run lint
+          else
+            echo '::warning::No "lint" script in package.json — skipping lint.'
+          fi
+
+      # Requires a "build" script (e.g. "vite build") — see README.
+      - name: Build
+        run: npm run build

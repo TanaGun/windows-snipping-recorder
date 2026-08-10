@@ -1,0 +1,93 @@
+name: Bug report
+description: Report a bug in Windows Snipping Recorder
+title: "[Bug]: "
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting. Before submitting:
+        - Search open issues for a duplicate.
+        - **Do not attach personal screen recordings or audio.** If you must
+          include media, blur/redact all sensitive content first.
+
+  - type: input
+    id: windows
+    attributes:
+      label: Windows version and build
+      description: e.g. `Windows 11 23H2 (build 22631.xxxx)` or `Windows 10 22H2 (19045.xxxx)`
+      placeholder: "Windows 11 23H2 (22631.xxxx)"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: mode
+    attributes:
+      label: What were you using?
+      description: The browser prototype is the only working surface today; native capture/audio is planned.
+      options:
+        - Browser prototype (web UI)
+        - Native app (Tauri build)
+        - Not sure
+    validations:
+      required: true
+
+  - type: dropdown
+    id: capture_mode
+    attributes:
+      label: Capture mode
+      options:
+        - Region
+        - Window
+        - Display / full screen
+        - Not applicable
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: audio
+    attributes:
+      label: Audio involved
+      options:
+        - System audio
+        - Microphone
+        - No audio
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: Minimal, concrete steps.
+      placeholder: |
+        1. Start the app / dev server
+        2. ...
+        3. ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+      description: Include any error text verbatim.
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs (optional)
+      description: Paste log snippets. Redact anything personal — logs are local-only and never sent anywhere.
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional context
+      description: Hardware (GPU), number/resolution of displays, recording length, file size, app version or commit.

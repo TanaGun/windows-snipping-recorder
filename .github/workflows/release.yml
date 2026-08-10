@@ -1,0 +1,44 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Build and create GitHub Release
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build web bundle
+        run: npm run build
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          # Auto-generated release notes from merged PRs since the last tag.
+          generate_release_notes: true
+          # Do not fail when an artifact glob matches nothing (e.g. dist/ not
+          # yet produced by the scaffold).
+          fail_on_unmatched_files: false
+          files: |
+            dist/**
+            src-tauri/target/release/bundle/**
+
+      # Notes for the future native (Tauri) release pipeline:
+      # - tauri-action can build and attach NSIS/MSI installers.
+      # - Code-signing certificates should be stored as GitHub Secrets
+      #   (never hardcoded here) when signing is adopted.
