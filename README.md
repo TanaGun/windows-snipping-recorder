@@ -35,8 +35,11 @@ Everything runs locally on your machine. Recordings stay in your folders until y
 - Captures save locally under `Pictures\\SnipRecord\\captures` (no network requests).
 - NSIS installer build pipeline.
 
+- Native MP4 full-desktop recording through locally installed FFmpeg (`gdigrab` + H.264), saved under `Pictures\SnipRecord\recordings`.
+- System audio (WASAPI loopback) and microphone are **not implemented yet**; controls stay disabled until native capture and A/V sync are tested.
+
 **Planned next:**
-- Recording with system audio (WASAPI loopback), microphone, or both, with A/V sync.
+- WASAPI loopback + microphone mixing with A/V sync.
 - Annotation and local history.
 - Explicit errors for protected content, missing devices, and permission failures.
 
