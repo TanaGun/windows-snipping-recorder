@@ -52,6 +52,17 @@ pnpm-debug.log*
 *.key
 *.p12
 *.pfx
+*.kdbx
+*.keystore
+*.jks
+*.ovpn
+*.mobileprovision
+secrets/
+private/
+credentials/
+*.credentials
+service-account*.json
+firebase-adminsdk-*.json
 
 # --- OS junk ------------------------------------------------------
 Thumbs.db

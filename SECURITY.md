@@ -19,6 +19,13 @@ A bug that breaks any of these properties is treated as a security vulnerability
 | `main` branch | ⚠️ Best effort (pre-1.0, no formal release support) |
 | Older releases | ❌ Unsupported |
 
+## Preventing accidental secret commits
+
+- Never commit passwords, API keys, OAuth tokens, `.env` files, private keys, signing certificates, databases, captures, recordings, logs, or customer data.
+- Keep local values in ignored files such as `.env.local`; commit only a redacted `.env.example` when configuration documentation is needed.
+- Run `gitleaks detect --source . --log-opts="--all" --redact` before every push. CI also runs the same secret scan for every push and pull request.
+- If a secret is exposed, revoke or rotate it immediately. Removing the file in a later commit is insufficient: rewrite the affected Git history and force-push only after rotation.
+
 ## Reporting a vulnerability
 
 **Please do not open a public issue for security vulnerabilities.**

@@ -1,0 +1,13 @@
+title = "Windows Snipping Recorder secret policy"
+
+[allowlist]
+  description = "Public template names and non-secret documentation only"
+  paths = [
+    '''(^|/)\.env\.example$''',
+    '''(^|/)README\.md$''',
+    '''(^|/)SECURITY\.md$''',
+    '''(^|/)\.github/workflows/secret-scan\.yml$''',
+  ]
+
+# Do not add real credential values to this allowlist. Fix or revoke a leaked
+# secret instead, then remove it from Git history before pushing.
