@@ -39,6 +39,9 @@ function App() {
   const [page, setPage] = useState('Capture')
   const [capturing, setCapturing] = useState(false)
   const [nativeCapture, setNativeCapture] = useState<NativeCapture | null>(null)
+  const [selectingRegion, setSelectingRegion] = useState(false)
+  const [regionStart, setRegionStart] = useState<{ x: number; y: number } | null>(null)
+  const [regionCurrent, setRegionCurrent] = useState<{ x: number; y: number } | null>(null)
 
   useEffect(() => {
     if (!recording) return
@@ -56,20 +59,67 @@ function App() {
     if (recording) { setRecording(false); notify('Prototype preview stopped — no media was created') }
     else { setSeconds(0); setRecording(true); notify('Prototype preview started — native recording is planned') }
   }
+  const saveNativeResult = (result: NativeCapture) => {
+    setNativeCapture(result)
+    notify(`Saved ${result.width} × ${result.height} PNG locally`)
+  }
   const takeCapture = async () => {
     if (!isTauri()) { notify(`${source} capture requires the Windows desktop build`); return }
-    if (source !== 'Full screen') { notify('This first native build supports Full screen. Region and Window are next.'); return }
+    if (source === 'Region') {
+      setSelectingRegion(true)
+      setRegionStart(null)
+      setRegionCurrent(null)
+      notify('Drag over the area to capture. Press Esc to cancel.')
+      return
+    }
+    if (source === 'Window') { notify('Window capture is the next native milestone.'); return }
     setCapturing(true)
     try {
-      const result = await invoke<NativeCapture>('capture_screen')
-      setNativeCapture(result)
-      notify(`Saved ${result.width} × ${result.height} PNG locally`)
+      saveNativeResult(await invoke<NativeCapture>('capture_screen'))
     } catch (error) {
       notify(`Capture failed: ${String(error)}`)
     } finally {
       setCapturing(false)
     }
   }
+  const finishRegion = async () => {
+    if (!regionStart || !regionCurrent) { setSelectingRegion(false); return }
+    const left = Math.min(regionStart.x, regionCurrent.x)
+    const top = Math.min(regionStart.y, regionCurrent.y)
+    const width = Math.abs(regionCurrent.x - regionStart.x)
+    const height = Math.abs(regionCurrent.y - regionStart.y)
+    setSelectingRegion(false)
+    setRegionStart(null)
+    setRegionCurrent(null)
+    if (width < 2 || height < 2) { notify('Selection is too small.'); return }
+    setCapturing(true)
+    try {
+      const chromeHeight = window.outerHeight - window.innerHeight
+      saveNativeResult(await invoke<NativeCapture>('capture_region', {
+        x: Math.round(window.screenX + left), y: Math.round(window.screenY + chromeHeight + top),
+        width: Math.round(width), height: Math.round(height),
+      }))
+    } catch (error) {
+      notify(`Capture failed: ${String(error)}`)
+    } finally {
+      setCapturing(false)
+    }
+  }
+  const cancelRegion = () => {
+    setSelectingRegion(false)
+    setRegionStart(null)
+    setRegionCurrent(null)
+    notify('Region capture cancelled')
+  }
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => { if (event.key === 'Escape' && selectingRegion) cancelRegion() }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [selectingRegion])
+  const regionBox = regionStart && regionCurrent ? {
+    left: Math.min(regionStart.x, regionCurrent.x), top: Math.min(regionStart.y, regionCurrent.y),
+    width: Math.abs(regionCurrent.x - regionStart.x), height: Math.abs(regionCurrent.y - regionStart.y),
+  } : null
 
   return <main className="app-shell">
     <aside className="sidebar">
@@ -100,6 +150,15 @@ function App() {
       </> : <section className="empty-view"><Scissors size={32}/><h2>{page} is local to this PC</h2><p>This prototype focuses on the Capture workflow. Select Capture to create a new snip.</p><button onClick={() => setPage('Capture')}>Go to Capture</button></section>}
     </section>
     {toast && <div className="toast"><Check size={17}/>{toast}</div>}
+    {selectingRegion && <div
+      className="region-overlay"
+      onMouseDown={(event) => { setRegionStart({ x: event.clientX, y: event.clientY }); setRegionCurrent({ x: event.clientX, y: event.clientY }) }}
+      onMouseMove={(event) => { if (regionStart) setRegionCurrent({ x: event.clientX, y: event.clientY }) }}
+      onMouseUp={finishRegion}
+    >
+      <div className="region-help">Drag to capture a region <kbd>Esc</kbd> to cancel</div>
+      {regionBox && <div className="region-selection" style={{ left: regionBox.left, top: regionBox.top, width: regionBox.width, height: regionBox.height }}><span>{Math.round(regionBox.width)} × {Math.round(regionBox.height)}</span></div>}
+    </div>}
   </main>
 }
 

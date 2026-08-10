@@ -51,19 +51,17 @@ impl Drop for OwnedBitmap {
     }
 }
 
-fn capture_primary_display() -> WinResult<(Vec<u8>, i32, i32)> {
+fn capture_pixels(x: i32, y: i32, width: i32, height: i32) -> WinResult<(Vec<u8>, i32, i32)> {
     unsafe {
-        let width = GetSystemMetrics(SM_CXSCREEN);
-        let height = GetSystemMetrics(SM_CYSCREEN);
         if width <= 0 || height <= 0 {
-            return Err(windows::core::Error::new(windows::core::HRESULT(0x80004005u32 as i32), "Could not read primary display size"));
+            return Err(windows::core::Error::new(windows::core::HRESULT(0x80004005u32 as i32), "Capture dimensions must be positive"));
         }
 
         let screen = ScreenDc(GetDC(None));
         let memory = CompatibleDc(CreateCompatibleDC(Some(screen.0)));
         let bitmap = OwnedBitmap(CreateCompatibleBitmap(screen.0, width, height));
         let old = SelectObject(memory.0, bitmap.0.into());
-        BitBlt(memory.0, 0, 0, width, height, Some(screen.0), 0, 0, SRCCOPY | CAPTUREBLT)?;
+        BitBlt(memory.0, 0, 0, width, height, Some(screen.0), x, y, SRCCOPY | CAPTUREBLT)?;
 
         let mut info = BITMAPINFO {
             bmiHeader: BITMAPINFOHEADER {
@@ -87,6 +85,12 @@ fn capture_primary_display() -> WinResult<(Vec<u8>, i32, i32)> {
     }
 }
 
+fn capture_primary_display() -> WinResult<(Vec<u8>, i32, i32)> {
+    let width = unsafe { GetSystemMetrics(SM_CXSCREEN) };
+    let height = unsafe { GetSystemMetrics(SM_CYSCREEN) };
+    capture_pixels(0, 0, width, height)
+}
+
 fn captures_dir(app: &AppHandle) -> Result<PathBuf, String> {
     let base = app.path().picture_dir().map_err(|error| error.to_string())
         .or_else(|_| app.path().app_data_dir().map_err(|error| error.to_string()))?;
@@ -95,9 +99,7 @@ fn captures_dir(app: &AppHandle) -> Result<PathBuf, String> {
     Ok(target)
 }
 
-#[tauri::command]
-fn capture_screen(app: AppHandle) -> Result<CaptureResult, String> {
-    let (bgra, width, height) = capture_primary_display().map_err(|error| error.to_string())?;
+fn save_capture(app: &AppHandle, bgra: Vec<u8>, width: i32, height: i32) -> Result<CaptureResult, String> {
     let mut rgba = Vec::with_capacity(bgra.len());
     for pixel in bgra.chunks_exact(4) {
         rgba.extend_from_slice(&[pixel[2], pixel[1], pixel[0], pixel[3]]);
@@ -105,9 +107,24 @@ fn capture_screen(app: AppHandle) -> Result<CaptureResult, String> {
     let image = ImageBuffer::<Rgba<u8>, _>::from_raw(width as u32, height as u32, rgba)
         .ok_or_else(|| "Failed to convert captured pixels".to_string())?;
     let timestamp = chrono_like_timestamp();
-    let path = captures_dir(&app)?.join(format!("snip-{timestamp}.png"));
+    let path = captures_dir(app)?.join(format!("snip-{timestamp}.png"));
     image.save(&path).map_err(|error| error.to_string())?;
     Ok(CaptureResult { path: path.to_string_lossy().to_string(), width, height })
+}
+
+#[tauri::command]
+fn capture_screen(app: AppHandle) -> Result<CaptureResult, String> {
+    let (bgra, width, height) = capture_primary_display().map_err(|error| error.to_string())?;
+    save_capture(&app, bgra, width, height)
+}
+
+#[tauri::command]
+fn capture_region(app: AppHandle, x: i32, y: i32, width: i32, height: i32) -> Result<CaptureResult, String> {
+    if width < 2 || height < 2 {
+        return Err("Select an area at least 2 × 2 pixels.".into());
+    }
+    let (bgra, width, height) = capture_pixels(x, y, width, height).map_err(|error| error.to_string())?;
+    save_capture(&app, bgra, width, height)
 }
 
 #[tauri::command]
@@ -125,7 +142,7 @@ fn chrono_like_timestamp() -> String {
 
 pub fn run() {
     tauri::Builder::default()
-        .invoke_handler(tauri::generate_handler![capture_screen, recording_capability])
+        .invoke_handler(tauri::generate_handler![capture_screen, capture_region, recording_capability])
         .run(tauri::generate_context!())
         .expect("error while running SnipRecord");
 }
@@ -137,5 +154,11 @@ mod tests {
     #[test]
     fn recording_is_honestly_reported_as_unavailable() {
         assert!(!recording_capability().available);
+    }
+
+    #[test]
+    fn capture_rejects_invalid_dimensions() {
+        assert!(capture_pixels(0, 0, 0, 100).is_err());
+        assert!(capture_pixels(0, 0, 100, 0).is_err());
     }
 }

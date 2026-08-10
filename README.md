@@ -30,12 +30,12 @@ Everything runs locally on your machine. Recordings stay in your folders until y
 
 **Working in the current native build:**
 - Tauri 2 + React + TypeScript Windows desktop application.
-- Primary-display PNG capture using Windows GDI (`CAPTUREBLT`).
+- Primary-display and drag-selected region PNG capture using Windows GDI (`CAPTUREBLT`).
 - Captures save locally under `Pictures\\SnipRecord\\captures` (no network requests).
 - NSIS installer build pipeline.
 
 **Planned next:**
-- Region and window capture.
+- Window capture.
 - Recording with system audio (WASAPI loopback), microphone, or both, with A/V sync.
 - Annotation, clipboard copy, local history, and explicit errors for protected content, missing devices, and permission failures.
 
