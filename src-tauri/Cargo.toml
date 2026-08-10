@@ -17,7 +17,7 @@ path = "src/main.rs"
 tauri-build = { version = "2.5", features = [] }
 
 [dependencies]
-tauri = { version = "2.11", features = [] }
+tauri = { version = "2.11", features = ["protocol-asset"] }
 serde = { version = "1", features = ["derive"] }
 image = { version = "0.25", default-features = false, features = ["png"] }
 arboard = { version = "3.6", default-features = false, features = ["image-data"] }

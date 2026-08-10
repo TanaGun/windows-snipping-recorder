@@ -21,7 +21,13 @@
         "center": true
       }
     ],
-    "security": { "csp": null }
+    "security": {
+      "csp": null,
+      "assetProtocol": {
+        "enable": true,
+        "scope": ["$HOME/Pictures/SnipRecord/captures/**/*"]
+      }
+    }
   },
   "bundle": {
     "active": true,
