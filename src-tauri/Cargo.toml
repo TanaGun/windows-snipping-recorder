@@ -1,20 +1,32 @@
 [package]
 name = "windows-snipping-recorder"
 version = "0.1.0"
-description = "Windows-local screen capture and recording utility"
+description = "Local-only Windows screen capture and recording utility"
 authors = ["Tanakom Phuvoraprasert"]
 edition = "2021"
 
 [lib]
-name = "windows_snipping_recorder"
+name = "windows_snipping_recorder_lib"
 crate-type = ["cdylib", "rlib"]
 
+[[bin]]
+name = "windows-snipping-recorder"
+path = "src/main.rs"
+
+[build-dependencies]
+tauri-build = { version = "2.5", features = [] }
+
 [dependencies]
-# Add tauri, windows, and capture/audio crates when Rust + Tauri prerequisites are installed.
+tauri = { version = "2.11", features = [] }
+serde = { version = "1", features = ["derive"] }
+image = { version = "0.25", default-features = false, features = ["png"] }
+windows = { version = "0.62", features = [
+  "Win32_Foundation",
+  "Win32_Graphics_Gdi",
+  "Win32_UI_WindowsAndMessaging",
+  "Win32_UI_HiDpi",
+] }
 
 [features]
-default = []
-custom-protocol = []
-
-# This is a native integration contract only. It intentionally does not compile
-# until the Tauri dependency set is installed on the Windows build host.
+default = ["custom-protocol"]
+custom-protocol = ["tauri/custom-protocol"]

@@ -2,7 +2,7 @@
 
 A **local-only** screen capture and recording utility for **Windows 10 and Windows 11** — built in public, with privacy as a hard requirement.
 
-**Status: early prototype.** The current prototype is a browser-based (Vite + React) UI. Native Windows capture — screen region/window/display capture via Windows Graphics Capture, system audio via WASAPI loopback, and microphone mixing — is **planned but not yet implemented** (see [Roadmap](#roadmap) and [product brief](docs/product-brief.md)).
+**Status: early native build.** The Tauri desktop app now captures the primary display to a local PNG file. Region/window capture, recording, WASAPI system audio, microphone mixing, annotation, clipboard, and history remain planned (see [Roadmap](#roadmap) and [product brief](docs/product-brief.md)).
 
 ## Why this project exists
 
@@ -28,20 +28,22 @@ Everything runs locally on your machine. Recordings stay in your folders until y
 
 ## Features
 
-**Current prototype (browser UI):**
-- React + Vite + TypeScript frontend scaffold.
-- Native integration contract (enums, request types, capability manifest) defined in `src-tauri/src/lib.rs` — compile-time documentation of the planned capture/audio boundary, **not a working implementation**.
+**Working in the current native build:**
+- Tauri 2 + React + TypeScript Windows desktop application.
+- Primary-display PNG capture using Windows GDI (`CAPTUREBLT`).
+- Captures save locally under `Pictures\\SnipRecord\\captures` (no network requests).
+- NSIS installer build pipeline.
 
-**Planned (native, via Tauri):**
-- Region / window / full-display capture.
+**Planned next:**
+- Region and window capture.
 - Recording with system audio (WASAPI loopback), microphone, or both, with A/V sync.
-- Explicit, user-friendly errors for protected content, missing devices, and permission failures.
+- Annotation, clipboard copy, local history, and explicit errors for protected content, missing devices, and permission failures.
 
 ## Roadmap
 
-1. **Prototype UI** — browser-based capture UX (in progress).
-2. **Tauri shell** — native window + secure local file access.
-3. **Native capture** — Windows Graphics Capture (region/window/display).
+1. **Primary-display PNG capture** — complete in the early Tauri build.
+2. **Region and window selection** — next capture milestone.
+3. **Annotation, clipboard, and local history** — local file workflow.
 4. **System audio** — WASAPI loopback.
 5. **Microphone mixing** — A/V sync + encoding (FFmpeg-based pipeline planned).
 6. **Release** — signed/unsigned installers via GitHub Releases.
@@ -62,17 +64,24 @@ npm run dev       # start the Vite development server
 npm run build     # type-check and create the production bundle in dist/
 ```
 
-The current browser prototype is intentionally a UI simulation: it does not capture screens, access devices, write media files, copy to the clipboard, or make network requests. CI runs `npm run build`; lint is skipped until a dedicated lint script is added.
+Use the native desktop build for real capture:
 
-### Future — Tauri native build (planned)
+```bash
+npm run tauri:dev      # run the Windows desktop application
+npm run tauri:build    # create an NSIS installer
+```
 
-When the Tauri shell and native capture land, a full desktop build additionally requires:
+The browser UI is a visual preview only. Real primary-display capture is available only in the Tauri desktop application; it writes a PNG locally and makes no network requests. Region/window capture, recording, audio, clipboard, and annotation are not implemented yet. CI runs `npm run build`; lint is skipped until a dedicated lint script is added.
+
+### Native build prerequisites
+
+A full desktop build requires:
 
 - **Rust** toolchain via [rustup](https://rustup.rs) (stable).
 - **Microsoft C++ Build Tools** — Visual Studio Build Tools with the "Desktop development with C++" workload.
 - **WebView2 Runtime** — preinstalled on Windows 11; installable on Windows 10.
 
-The crate contract in `src-tauri/` intentionally does **not** compile until the Tauri dependency set is installed, so a plain `npm run build` never depends on native prerequisites.
+`npm run build` builds the web bundle without native prerequisites. `npm run tauri:build` requires the Windows native toolchain above.
 
 ## Project layout
 
